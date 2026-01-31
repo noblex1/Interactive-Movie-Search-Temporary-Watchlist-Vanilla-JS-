@@ -9,6 +9,8 @@ const refs = {
   watchlistGrid: document.getElementById('watchlistGrid'),
   watchlistEmpty: document.getElementById('watchlistEmpty'),
   themeToggle: document.getElementById('themeToggle'),
+	clearBtn: document.getElementById('clearBtn'),
+	charCounter: document.getElementById('charCounter'),
 };
 
 function setStatus(text, isError = false) {
@@ -112,7 +114,8 @@ function renderWatchlist() {
     `;
     const rm = div.querySelector('.remove-watch');
     rm.addEventListener('click', () => removeFromWatchlist(item.imdbID));
-    refs.watchlistGrid.appendChild(div);
+		refs.watchlistGrid.appendChild(div);
+		animateShow(div);
   });
 }
 
@@ -139,7 +142,19 @@ function renderMovies(list) {
 	list.forEach(m => {
 		const card = createMovieCard(m);
 		refs.grid.appendChild(card);
+		animateShow(card);
 	});
+}
+
+function animateShow(el) {
+  el.classList.add('fade-in');
+  // allow browser to paint then add show
+  requestAnimationFrame(() => el.classList.add('show'));
+}
+
+function clearResults() {
+  clearGrid();
+  setStatus('Results cleared');
 }
 
 function searchMovies(query) {
@@ -184,6 +199,18 @@ refs.btn.addEventListener('click', () => searchMovies(refs.input.value));
 refs.input.addEventListener('keydown', (e) => {
 	if (e.key === 'Enter') searchMovies(refs.input.value);
 });
+
+// live char counter
+if (refs.charCounter) {
+	refs.input.addEventListener('input', () => {
+		refs.charCounter.textContent = `Search term: ${refs.input.value.length} chars`;
+	});
+}
+
+// clear results
+if (refs.clearBtn) {
+	refs.clearBtn.addEventListener('click', () => clearResults());
+}
 
 // Theme toggle
 if (refs.themeToggle) {

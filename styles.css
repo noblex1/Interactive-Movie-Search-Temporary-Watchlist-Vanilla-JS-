@@ -38,6 +38,9 @@ button:disabled { opacity: 0.6; cursor: not-allowed }
   gap: 20px;
 }
 
+.fade-in { opacity: 0; transform: translateY(6px); transition: opacity 0.35s ease, transform 0.35s ease }
+.fade-in.show { opacity: 1; transform: translateY(0) }
+
 .movie-card {
   background: #fff;
   border-radius: 8px;
