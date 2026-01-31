@@ -8,6 +8,7 @@ const refs = {
 	grid: document.getElementById('movieGrid'),
   watchlistGrid: document.getElementById('watchlistGrid'),
   watchlistEmpty: document.getElementById('watchlistEmpty'),
+  themeToggle: document.getElementById('themeToggle'),
 };
 
 function setStatus(text, isError = false) {
@@ -183,6 +184,14 @@ refs.btn.addEventListener('click', () => searchMovies(refs.input.value));
 refs.input.addEventListener('keydown', (e) => {
 	if (e.key === 'Enter') searchMovies(refs.input.value);
 });
+
+// Theme toggle
+if (refs.themeToggle) {
+	refs.themeToggle.addEventListener('click', () => {
+		const isDark = document.body.classList.toggle('dark-mode');
+		refs.themeToggle.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+	});
+}
 
 // Small helpful hint if API key not set
 if (API_KEY === 'YOUR_API_KEY_HERE') {
