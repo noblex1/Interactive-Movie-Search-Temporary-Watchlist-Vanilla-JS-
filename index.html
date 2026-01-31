@@ -8,15 +8,15 @@
 </head>
 <body>
   <header>
-    <h1>🎬 Movie Explorer</h1>
-    <button id="themeToggle" class="theme-btn">🌙 Dark Mode</button>
+    <h1>Movie Explorer</h1>
+    <button id="themeToggle">🌙 Dark Mode</button>
   </header>
 
   <main>
     <section class="search-area">
       <input type="text" id="searchInput" placeholder="Search movies (e.g. Inception)" />
-      <button id="searchBtn" class="search-btn">Search</button>
-      <p id="statusMessage" class="status"></p>
+      <button id="searchBtn">Search</button>
+      <p id="statusMessage"></p>
     </section>
 
     <section id="results">
@@ -25,9 +25,9 @@
     </section>
 
     <section id="watchlist-section">
-      <h2>My Watchlist <span id="watchlistCounter" class="counter">(0)</span></h2>
+      <h2>My Watchlist (this session only)</h2>
       <div id="watchlistGrid" class="grid"></div>
-      <p id="watchlistEmpty" class="empty-state">Your watchlist is empty. Add movies to get started! 🍿</p>
+      <p id="watchlistEmpty">Your watchlist is empty.</p>
     </section>
   </main>
 
