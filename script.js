@@ -6,6 +6,8 @@ const refs = {
 	btn: document.getElementById('searchBtn'),
 	status: document.getElementById('statusMessage'),
 	grid: document.getElementById('movieGrid'),
+  watchlistGrid: document.getElementById('watchlistGrid'),
+  watchlistEmpty: document.getElementById('watchlistEmpty'),
 };
 
 function setStatus(text, isError = false) {
@@ -33,10 +35,102 @@ function createMovieCard(movie) {
 		<div style="padding:10px">
 			<h3 style="margin:6px 0;font-size:1rem">${movie.Title}</h3>
 			<p style="margin:2px 0;color:#666">${movie.Year} • ${movie.Type}</p>
+			<div style="margin-top:8px;display:flex;gap:8px">
+				<button class="details-btn">Show Details</button>
+				<button class="watch-btn">Add to Watchlist</button>
+			</div>
 		</div>
+		<div class="extra-details" style="padding:10px;display:none;border-top:1px solid rgba(0,0,0,0.06)"></div>
 	`;
 
+	// Details button: fetch extra info when opened
+	const detailsBtn = card.querySelector('.details-btn');
+	const extraDiv = card.querySelector('.extra-details');
+	detailsBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		if (extraDiv.style.display === 'block') {
+			extraDiv.style.display = 'none';
+			detailsBtn.textContent = 'Show Details';
+			return;
+		}
+		detailsBtn.textContent = 'Loading...';
+		fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${movie.imdbID}&plot=short`)
+			.then(r => r.json())
+			.then(d => {
+				detailsBtn.textContent = 'Hide Details';
+				if (d && d.Response !== 'False') {
+					extraDiv.innerHTML = `
+						<p style="margin:6px 0"><strong>Plot:</strong> ${d.Plot || 'N/A'}</p>
+						<p style="margin:6px 0"><strong>Actors:</strong> ${d.Actors || 'N/A'}</p>
+						<p style="margin:6px 0"><strong>IMDB Rating:</strong> ${d.imdbRating || 'N/A'}</p>
+					`;
+					extraDiv.style.display = 'block';
+				} else {
+					extraDiv.innerHTML = '<p>Details not available.</p>';
+					extraDiv.style.display = 'block';
+				}
+			})
+			.catch(() => {
+				detailsBtn.textContent = 'Show Details';
+				extraDiv.innerHTML = '<p>Error loading details.</p>';
+				extraDiv.style.display = 'block';
+			});
+	});
+
+	// Watchlist button
+	const watchBtn = card.querySelector('.watch-btn');
+	watchBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		addToWatchlist(movie);
+	});
+
 	return card;
+}
+
+// ----- Watchlist (in-memory) -----
+const watchlist = [];
+
+function renderWatchlist() {
+  refs.watchlistGrid.innerHTML = '';
+  if (watchlist.length === 0) {
+    refs.watchlistEmpty.style.display = 'block';
+    return;
+  }
+  refs.watchlistEmpty.style.display = 'none';
+
+  watchlist.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'movie-card';
+    const poster = item.Poster && item.Poster !== 'N/A' ? item.Poster : '';
+    div.innerHTML = `
+      <img src="${poster}" alt="${item.Title} poster" style="width:100%;height:200px;object-fit:cover;background:#ddd" />
+      <div style="padding:8px">
+        <h4 style="margin:6px 0;font-size:0.95rem">${item.Title}</h4>
+        <button class="remove-watch">Remove</button>
+      </div>
+    `;
+    const rm = div.querySelector('.remove-watch');
+    rm.addEventListener('click', () => removeFromWatchlist(item.imdbID));
+    refs.watchlistGrid.appendChild(div);
+  });
+}
+
+function addToWatchlist(movie) {
+  if (watchlist.some(w => w.imdbID === movie.imdbID)) {
+    setStatus('Already in watchlist');
+    return;
+  }
+  watchlist.push(movie);
+  setStatus('Added to watchlist');
+  renderWatchlist();
+}
+
+function removeFromWatchlist(id) {
+  const idx = watchlist.findIndex(w => w.imdbID === id);
+  if (idx === -1) return;
+  watchlist.splice(idx, 1);
+  setStatus('Removed from watchlist');
+  renderWatchlist();
 }
 
 function renderMovies(list) {
