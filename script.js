@@ -13,6 +13,11 @@ function setStatus(text, isError = false) {
 	refs.status.style.color = isError ? 'crimson' : '';
 }
 
+function toggleControls(disabled) {
+	refs.btn.disabled = disabled;
+	refs.input.disabled = disabled;
+}
+
 function clearGrid() {
 	refs.grid.innerHTML = '';
 }
@@ -47,9 +52,9 @@ function searchMovies(query) {
 		setStatus('Please enter a search term.', true);
 		return;
 	}
-
 	setStatus('Searching...');
 	clearGrid();
+	toggleControls(true);
 
 	fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=${encodeURIComponent(query)}`)
 		.then(res => res.json())
@@ -57,7 +62,13 @@ function searchMovies(query) {
 			if (!data) throw new Error('No response data');
 			if (data.Response === 'False') {
 				const err = data.Error || 'No results.';
-				setStatus(err, true);
+				if (err.toLowerCase().includes('invalid api key')) {
+					setStatus('Invalid API key. Check your API key in script.js', true);
+				} else if (err.toLowerCase().includes('movie not found')) {
+					setStatus('No movies found. Try a different keyword.', true);
+				} else {
+					setStatus(err, true);
+				}
 				return;
 			}
 
@@ -66,7 +77,10 @@ function searchMovies(query) {
 		})
 		.catch(err => {
 			console.error(err);
-			setStatus('Network or server error. Try again.', true);
+			setStatus('Network or server error. Check connection and try again.', true);
+		})
+		.finally(() => {
+			toggleControls(false);
 		});
 }
 
