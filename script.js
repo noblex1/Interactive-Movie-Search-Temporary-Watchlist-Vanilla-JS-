@@ -1,238 +1,240 @@
-// =============== API & DOM SETUP ===============
-
+// API key for OMDb and watchlist array to store movies
 const API_KEY = 'a0a60565';
+let watchlist = [];
 
-// DOM element references
-const refs = {
-  input: document.getElementById('searchInput'),
-  btn: document.getElementById('searchBtn'),
-  status: document.getElementById('statusMessage'),
-  grid: document.getElementById('movieGrid'),
-  watchlistGrid: document.getElementById('watchlistGrid'),
-  watchlistEmpty: document.getElementById('watchlistEmpty'),
-  themeToggle: document.getElementById('themeToggle'),
-  clearBtn: document.getElementById('clearBtn'),
-  charCounter: document.getElementById('charCounter'),
-};
+// Event listener when search button is clicked
+document.getElementById('searchBtn').addEventListener('click', searchMovies);
 
-// In-memory watchlist storage
-const watchlist = [];
+// Event listener for Enter key in search input
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchMovies();
+});
 
-// =============== UTILITY FUNCTIONS ===============
+// Event listener to toggle between light and dark mode
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-// Display status message with optional error styling
-const setStatus = (text, err = false) => {
-  refs.status.textContent = text;
-  refs.status.style.color = err ? 'crimson' : '';
-};
+// Event listener to clear all search results
+document.getElementById('clearBtn').addEventListener('click', clearResults);
 
-// Enable or disable search controls
-const toggleControls = disabled => {
-  refs.btn.disabled = refs.input.disabled = disabled;
-};
+// Event listener to update character counter as user types
+document.getElementById('searchInput').addEventListener('input', updateCharCounter);
 
-// Clear movie grid
-const clearGrid = () => refs.grid.innerHTML = '';
+// Function to search movies from API
+function searchMovies() {
+  const query = document.getElementById('searchInput').value; // get text from search box
+  
+  // validate search input
+  if (!query.trim()) {
+    document.getElementById('statusMessage').textContent = 'Please enter a search term.';
+    document.getElementById('statusMessage').style.color = 'crimson';
+    return;
+  }
 
-// Animate element on load
-const animateShow = el => {
-  el.classList.add('fade-in');
-  requestAnimationFrame(() => el.classList.add('show'));
-};
+  // show loading message
+  document.getElementById('statusMessage').textContent = 'Searching...';
+  document.getElementById('movieGrid').innerHTML = '';
 
-// =============== MOVIE DETAILS FUNCTIONS ===============
+  // disable search button and input while fetching
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('searchInput').disabled = true;
 
-// Fetch and display movie details from API
-const fetchMovieDetails = (id, btn, div) => {
-  fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${id}&plot=short`)
-    .then(r => r.json())
+  // build API URL with key and search query
+  const url = `https://www.omdbapi.com/?apikey=${API_KEY}&s=${encodeURIComponent(query)}`;
+
+  // fetch movies from API
+  fetch(url)
+    .then(response => response.json()) // convert response to object
     .then(data => {
-      btn.textContent = 'Hide Details';
-      if (data?.Response !== 'False') {
-        div.innerHTML = `
-          <p><strong>Plot:</strong> ${data?.Plot || 'N/A'}</p>
-          <p><strong>Actors:</strong> ${data?.Actors || 'N/A'}</p>
-          <p><strong>Rating:</strong> ${data?.imdbRating || 'N/A'}</p>`;
+      // check if movies found
+      if (data.Response === 'True') {
+        document.getElementById('statusMessage').textContent = `${data.Search.length} results found`;
+        document.getElementById('statusMessage').style.color = '';
+        displayMovies(data.Search); // show movies on page
       } else {
-        div.innerHTML = '<p>Details not available.</p>';
+        document.getElementById('statusMessage').textContent = 'No movies found. Try a different keyword.';
+        document.getElementById('statusMessage').style.color = 'crimson';
       }
-      div.classList.add('show');
+    })
+    .catch(error => {
+      // handle network errors
+      document.getElementById('statusMessage').textContent = 'Error fetching data. Check your connection.';
+      document.getElementById('statusMessage').style.color = 'crimson';
+    })
+    .finally(() => {
+      // re-enable search controls
+      document.getElementById('searchBtn').disabled = false;
+      document.getElementById('searchInput').disabled = false;
+    });
+}
+
+// Function to display movies on the page
+function displayMovies(movies) {
+  const resultsContainer = document.getElementById('movieGrid');
+  resultsContainer.innerHTML = ''; // clear previous results
+
+  // loop through each movie and create a card
+  movies.forEach(movie => {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+
+    // use poster image or placeholder if not available
+    const poster = movie.Poster !== 'N/A' ? movie.Poster : '';
+
+    // build HTML for movie card
+    card.innerHTML = `
+      <img src="${poster}" alt="${movie.Title}" class="card-img">
+      <div class="card-content">
+        <h3 class="card-title">${movie.Title}</h3>
+        <p class="card-meta">${movie.Year} • ${movie.Type}</p>
+        <div class="card-buttons">
+          <button class="details-btn" onclick="showDetails('${movie.imdbID}', this)">Show Details</button>
+          <button class="watch-btn" onclick="addToWatchlist('${movie.imdbID}', '${movie.Title}', '${poster}')">Add to Watchlist</button>
+        </div>
+      </div>
+      <div class="card-details" id="details-${movie.imdbID}"></div>
+    `;
+
+    resultsContainer.appendChild(card);
+    animateCard(card);
+  });
+}
+
+// Function to show movie details when button clicked
+function showDetails(movieId, button) {
+  const detailsDiv = document.getElementById(`details-${movieId}`);
+
+  // toggle details if already showing
+  if (detailsDiv.classList.contains('show')) {
+    detailsDiv.classList.remove('show');
+    button.textContent = 'Show Details';
+    return;
+  }
+
+  // show loading state
+  button.textContent = 'Loading...';
+
+  // fetch movie details from API
+  fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&i=${movieId}&plot=short`)
+    .then(response => response.json())
+    .then(data => {
+      button.textContent = 'Hide Details';
+      
+      // check if data received
+      if (data.Response !== 'False') {
+        // display plot, actors, and rating
+        detailsDiv.innerHTML = `
+          <p><strong>Plot:</strong> ${data.Plot || 'N/A'}</p>
+          <p><strong>Actors:</strong> ${data.Actors || 'N/A'}</p>
+          <p><strong>Rating:</strong> ${data.imdbRating || 'N/A'}</p>`;
+      } else {
+        detailsDiv.innerHTML = '<p>Details not available.</p>';
+      }
+      
+      detailsDiv.classList.add('show');
     })
     .catch(() => {
-      div.innerHTML = '<p>Error loading details.</p>';
-      div.classList.add('show');
+      detailsDiv.innerHTML = '<p>Error loading details.</p>';
+      detailsDiv.classList.add('show');
     });
-};
+}
 
-// =============== MOVIE CARD CREATION ===============
+// Function to add movie to watchlist
+function addToWatchlist(movieId, movieTitle, moviePoster) {
+  // check if movie already in watchlist
+  if (watchlist.some(item => item.id === movieId)) {
+    document.getElementById('statusMessage').textContent = 'Already in watchlist';
+    return;
+  }
 
-// Create a movie card with poster, info, and action buttons
-const createMovieCard = movie => {
-  const card = document.createElement('div');
-  card.className = 'movie-card';
-  const poster = movie.Poster !== 'N/A' ? movie.Poster : '';
+  // add movie to array with poster
+  watchlist.push({ id: movieId, title: movieTitle, poster: moviePoster });
   
-  card.innerHTML = `
-    <img src="${poster}" alt="${movie.Title}" class="card-img">
-    <div class="card-content">
-      <h3 class="card-title">${movie.Title}</h3>
-      <p class="card-meta">${movie.Year} • ${movie.Type}</p>
-      <div class="card-buttons">
-        <button class="details-btn">Show Details</button>
-        <button class="watch-btn">Add to Watchlist</button>
-      </div>
-    </div>
-    <div class="card-details"></div>`;
-
-  const detailsBtn = card.querySelector('.details-btn');
-  const detailsDiv = card.querySelector('.card-details');
-  const watchBtn = card.querySelector('.watch-btn');
-
-  // Toggle movie details
-  detailsBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    if (detailsDiv.classList.contains('show')) {
-      detailsDiv.classList.remove('show');
-      detailsBtn.textContent = 'Show Details';
-    } else {
-      detailsBtn.textContent = 'Loading...';
-      fetchMovieDetails(movie.imdbID, detailsBtn, detailsDiv);
-    }
-  });
-
-  // Add to watchlist
-  watchBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    addToWatchlist(movie);
-  });
-
-  return card;
-};
-
-// =============== WATCHLIST MANAGEMENT ===============
-
-// Render all watchlist items
-const renderWatchlist = () => {
-  refs.watchlistGrid.innerHTML = '';
+  // show confirmation
+  document.getElementById('statusMessage').textContent = 'Added to watchlist';
+  document.getElementById('statusMessage').style.color = '';
   
+  // update watchlist display
+  renderWatchlist();
+}
+
+// Function to display watchlist items on page
+function renderWatchlist() {
+  const watchlistContainer = document.getElementById('watchlistGrid');
+  const emptyMessage = document.getElementById('watchlistEmpty');
+
+  // clear previous watchlist
+  watchlistContainer.innerHTML = '';
+
+  // show empty message if no movies
   if (watchlist.length === 0) {
-    refs.watchlistEmpty.style.display = 'block';
+    emptyMessage.style.display = 'block';
     return;
   }
-  
-  refs.watchlistEmpty.style.display = 'none';
-  
+
+  emptyMessage.style.display = 'none';
+
+  // loop through watchlist and create cards
   watchlist.forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'movie-card';
-    const poster = item.Poster !== 'N/A' ? item.Poster : '';
-    
-    div.innerHTML = `
-      <img src="${poster}" alt="${item.Title}" class="watchlist-img">
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+
+    // build HTML for watchlist item with poster image
+    card.innerHTML = `
+      <img src="${item.poster}" alt="${item.title}" class="watchlist-img">
       <div class="watchlist-item">
-        <h4 class="watchlist-title">${item.Title}</h4>
-        <button class="remove-watch">Remove from Watchlist</button>
-      </div>`;
-    
-    div.querySelector('.remove-watch').addEventListener('click', () => {
-      removeFromWatchlist(item.imdbID);
-    });
-    
-    refs.watchlistGrid.appendChild(div);
-    animateShow(div);
+        <h4 class="watchlist-title">${item.title}</h4>
+        <button class="remove-watch" onclick="removeFromWatchlist('${item.id}')">Remove from Watchlist</button>
+      </div>
+    `;
+
+    watchlistContainer.appendChild(card);
+    animateCard(card);
   });
-};
+}
 
-// Add movie to watchlist
-const addToWatchlist = movie => {
-  if (watchlist.some(w => w.imdbID === movie.imdbID)) {
-    setStatus('Already in watchlist');
-    return;
-  }
-  watchlist.push(movie);
-  setStatus('Added to watchlist');
-  renderWatchlist();
-};
-
-// Remove movie from watchlist
-const removeFromWatchlist = id => {
-  watchlist.splice(watchlist.findIndex(w => w.imdbID === id), 1);
-  setStatus('Removed from watchlist');
-  renderWatchlist();
-};
-
-// =============== SEARCH & DISPLAY ===============
-
-// Display search results
-const renderMovies = list => {
-  clearGrid();
-  list.forEach(m => {
-    const card = createMovieCard(m);
-    refs.grid.appendChild(card);
-    animateShow(card);
-  });
-};
-
-// Search movies from OMDb API
-const searchMovies = query => {
-  if (!query?.trim()) {
-    setStatus('Please enter a search term.', true);
-    return;
-  }
+// Function to remove movie from watchlist
+function removeFromWatchlist(movieId) {
+  // filter out the selected movie
+  watchlist = watchlist.filter(item => item.id !== movieId);
   
-  setStatus('Searching...');
-  clearGrid();
-  toggleControls(true);
+  // show confirmation
+  document.getElementById('statusMessage').textContent = 'Removed from watchlist';
   
-  fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=${encodeURIComponent(query)}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.Response === 'False') {
-        const msg = data.Error?.toLowerCase() || '';
-        const errorText = msg.includes('invalid api key') ? 'Invalid API key. Check script.js' :
-                         msg.includes('movie not found') ? 'No movies found. Try different keyword.' :
-                         data.Error || 'No results.';
-        setStatus(errorText, true);
-        return;
-      }
-      setStatus(`${data.Search.length} results`);
-      renderMovies(data.Search);
-    })
-    .catch(() => setStatus('Network error. Check your connection.', true))
-    .finally(() => toggleControls(false));
-};
+  // update watchlist display
+  renderWatchlist();
+}
 
-// =============== EVENT LISTENERS ===============
+// Function to clear all search results
+function clearResults() {
+  document.getElementById('movieGrid').innerHTML = '';
+  document.getElementById('statusMessage').textContent = 'Results cleared';
+  document.getElementById('statusMessage').style.color = '';
+}
 
-// Search button click
-refs.btn.addEventListener('click', () => searchMovies(refs.input.value));
+// Function to update character counter as user types
+function updateCharCounter() {
+  const length = document.getElementById('searchInput').value.length;
+  document.getElementById('charCounter').textContent = `Search term: ${length} chars`;
+}
 
-// Search on Enter key
-refs.input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') searchMovies(refs.input.value);
-});
+// Function to toggle dark mode
+function toggleTheme() {
+  document.body.classList.toggle('dark-mode');
+  
+  // update button text
+  const isDark = document.body.classList.contains('dark-mode');
+  document.getElementById('themeToggle').textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+}
 
-// Update character counter on input
-refs.input.addEventListener('input', () => {
-  refs.charCounter.textContent = `Search term: ${refs.input.value.length} chars`;
-});
+// Function to animate cards when they appear
+function animateCard(element) {
+  element.classList.add('fade-in');
+  requestAnimationFrame(() => element.classList.add('show'));
+}
 
-// Clear results button
-refs.clearBtn.addEventListener('click', () => {
-  clearGrid();
-  setStatus('Results cleared');
-});
-
-// Theme toggle
-refs.themeToggle.addEventListener('click', () => {
-  const isDark = document.body.classList.toggle('dark-mode');
-  refs.themeToggle.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
-});
-
-// =============== INITIALIZATION ===============
-
-// Warn if API key not set
+// Check if API key is set
 if (API_KEY === 'YOUR_API_KEY_HERE') {
-  setStatus('Remember to set your OMDb API key in script.js', true);
+  document.getElementById('statusMessage').textContent = 'Remember to set your OMDb API key in script.js';
+  document.getElementById('statusMessage').style.color = 'crimson';
 }
 
