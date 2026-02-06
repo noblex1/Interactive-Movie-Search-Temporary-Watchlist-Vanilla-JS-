@@ -1,6 +1,22 @@
 // API key for OMDb and watchlist array to store movies
 const API_KEY = 'a0a60565';
+const WATCHLIST_STORAGE_KEY = 'movieWatchlist';
 let watchlist = [];
+
+// Load watchlist from local storage
+function loadWatchlist() {
+  const saved = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+  watchlist = saved ? JSON.parse(saved) : [];
+}
+
+// Save watchlist to local storage
+function saveWatchlist() {
+  localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist));
+}
+
+// Load watchlist on startup
+loadWatchlist();
+renderWatchlist();
 
 // Event listener when search button is clicked
 document.getElementById('searchBtn').addEventListener('click', searchMovies);
@@ -154,6 +170,7 @@ function addToWatchlist(movieId, movieTitle, moviePoster) {
   document.getElementById('statusMessage').style.color = '';
   
   // update watchlist display
+  saveWatchlist();
   renderWatchlist();
 }
 
@@ -201,6 +218,7 @@ function removeFromWatchlist(movieId) {
   document.getElementById('statusMessage').textContent = 'Removed from watchlist';
   
   // update watchlist display
+  saveWatchlist();
   renderWatchlist();
 }
 
