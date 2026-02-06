@@ -23,7 +23,7 @@ renderWatchlist();
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
 if (savedTheme === 'dark') {
   document.body.classList.add('dark-mode');
-  document.getElementById('themeToggle').textContent = '☀️ Light Mode';
+  document.getElementById('themeToggle').textContent = '☀️';
 }
 
 // Event listener when search button is clicked
@@ -249,7 +249,7 @@ function toggleTheme() {
 
   // update button text
   const isDark = document.body.classList.contains('dark-mode');
-  document.getElementById('themeToggle').textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+  document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
   localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
 }
 
