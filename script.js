@@ -1,6 +1,7 @@
 // API key for OMDb and watchlist array to store movies
 const API_KEY = 'a0a60565';
 const WATCHLIST_STORAGE_KEY = 'movieWatchlist';
+const THEME_STORAGE_KEY = 'movieTheme';
 let watchlist = [];
 
 // Load watchlist from local storage
@@ -17,6 +18,13 @@ function saveWatchlist() {
 // Load watchlist on startup
 loadWatchlist();
 renderWatchlist();
+
+// Load theme preference on startup
+const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+if (savedTheme === 'dark') {
+  document.body.classList.add('dark-mode');
+  document.getElementById('themeToggle').textContent = '☀️ Light Mode';
+}
 
 // Event listener when search button is clicked
 document.getElementById('searchBtn').addEventListener('click', searchMovies);
@@ -238,10 +246,11 @@ function updateCharCounter() {
 // Function to toggle dark mode
 function toggleTheme() {
   document.body.classList.toggle('dark-mode');
-  
+
   // update button text
   const isDark = document.body.classList.contains('dark-mode');
   document.getElementById('themeToggle').textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+  localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
 }
 
 // Function to animate cards when they appear
